@@ -6,6 +6,18 @@ const {
 
 const CATEGORY_RULES = [
   {
+    quickCategory: "Other Revenue",
+    fundingNature: "Receivable",
+    category: "Reimbursement",
+    allowedTypes: ["Payment"],
+    patterns: [
+      /\bcustomer\b/i,
+      /\bbalance\b/i,
+      /\bpaid balance\b/i,
+      /\bpayment\b/i,
+    ],
+  },
+  {
     quickCategory: "Sales Revenue",
     fundingNature: "Revenue",
     category: "Empty Sack Sale",
@@ -396,6 +408,10 @@ function inferCurrency(text) {
 }
 
 function inferTransactionType(text) {
+  if (isReceivablePayment(text)) {
+    return "Payment";
+  }
+
   const hasRevenueSignal = REVENUE_PATTERNS.some((pattern) => pattern.test(text));
   const hasExpenseSignal = EXPENSE_PATTERNS.some((pattern) => pattern.test(text));
 
@@ -408,6 +424,12 @@ function inferTransactionType(text) {
   }
 
   return "Expense";
+}
+
+function isReceivablePayment(text) {
+  return /\b(?:customer|buyer|client)\b/i.test(text) &&
+    /\b(?:paid|payment|bayad|nagbayad)\b/i.test(text) &&
+    /\b(?:balance|receivable|utang|kulang)\b/i.test(text);
 }
 
 function inferCategory(text, transactionType) {
@@ -692,6 +714,7 @@ function extractQuantityAndUnitPrice(text) {
   const quantityWithPricePatterns = [
     new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:x|@|at|per)\\s*(?:php|\\u20b1|p)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:pesos?|php))?(?:\\s*(?:each|ea))?\\b`, "i"),
     new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:php|\\u20b1|p)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:each|ea))?\\b`, "i"),
+    new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:each|ea)\\b`, "i"),
   ];
 
   for (const pattern of quantityWithPricePatterns) {

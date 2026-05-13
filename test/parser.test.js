@@ -107,6 +107,104 @@ test("treats sold empty sacks as revenue", () => {
   assert.equal(parsed.amount, 300);
 });
 
+test("requested regression: bought sacks is supplies expense", () => {
+  const parsed = parseQuickEntry("bought sacks 300 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Supplies");
+  assert.equal(parsed.amount, 300);
+});
+
+test("requested regression: sold empty sacks is empty sack sale income", () => {
+  const parsed = parseQuickEntry("sold empty sacks 500 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Income");
+  assert.equal(parsed.fundingNature, "Revenue");
+  assert.equal(parsed.category, "Empty Sack Sale");
+  assert.equal(parsed.amount, 500);
+});
+
+test("requested regression: sold trays of eggs calculates amount", () => {
+  const parsed = parseQuickEntry("sold 10 trays eggs 220 each", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Income");
+  assert.equal(parsed.fundingNature, "Revenue");
+  assert.equal(parsed.category, "Net Meat Sale");
+  assert.equal(parsed.quantity, 10);
+  assert.equal(parsed.unit, "tray");
+  assert.equal(parsed.unitPrice, 220);
+  assert.equal(parsed.amount, 2200);
+  assert.equal(parsed.amountSource, "quantity_x_unit_price");
+});
+
+test("requested regression: bought bags of feed calculates amount", () => {
+  const parsed = parseQuickEntry("bought 2 bags feed 1600 each", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Feed");
+  assert.equal(parsed.quantity, 2);
+  assert.equal(parsed.unit, "bag");
+  assert.equal(parsed.unitPrice, 1600);
+  assert.equal(parsed.amount, 3200);
+  assert.equal(parsed.amountSource, "quantity_x_unit_price");
+});
+
+test("requested regression: paid helper yesterday parses labor and date", () => {
+  const parsed = parseQuickEntry("paid helper yesterday 500 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Labor");
+  assert.equal(parsed.date, "2026-05-13");
+  assert.equal(parsed.amount, 500);
+});
+
+test("requested regression: gipalit kahoy pang repair is repair expense", () => {
+  const parsed = parseQuickEntry("gipalit ug kahoy pang repair 400", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Minor Repair");
+  assert.equal(parsed.quickCategory, "Repairs and Maintenance");
+  assert.equal(parsed.amount, 400);
+});
+
+test("requested regression: bought wood is hardware capex", () => {
+  const parsed = parseQuickEntry("bought wood 400", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "CAPEX");
+  assert.equal(parsed.category, "Hardware");
+  assert.equal(parsed.amount, 400);
+});
+
+test("requested regression: customer paid balance is receivable payment", () => {
+  const parsed = parseQuickEntry("customer paid balance 1000", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Payment");
+  assert.equal(parsed.fundingNature, "Receivable");
+  assert.equal(parsed.category, "Reimbursement");
+  assert.equal(parsed.amount, 1000);
+});
+
 test("parses relative English and Bisaya dates", () => {
   const cases = [
     ["bought feeds today 100 pesos", "2026-05-14"],
