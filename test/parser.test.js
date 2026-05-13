@@ -107,6 +107,70 @@ test("treats sold empty sacks as revenue", () => {
   assert.equal(parsed.amount, 300);
 });
 
+test("parses relative English and Bisaya dates", () => {
+  const cases = [
+    ["bought feeds today 100 pesos", "2026-05-14"],
+    ["bought feeds this morning 100 pesos", "2026-05-14"],
+    ["bought feeds karong buntag 100 pesos", "2026-05-14"],
+    ["bought feeds yesterday 100 pesos", "2026-05-13"],
+    ["bought feeds gahapon 100 pesos", "2026-05-13"],
+    ["bought feeds kagahapon 100 pesos", "2026-05-13"],
+    ["bought feeds last week 100 pesos", "2026-05-07"],
+  ];
+
+  for (const [text, expectedDate] of cases) {
+    const parsed = parseQuickEntry(text, { today: "2026-05-14" });
+    assert.equal(parsed.date, expectedDate, text);
+    assert.equal(parsed.description, "Feeds", text);
+  }
+});
+
+test("parses last weekday dates", () => {
+  assert.equal(
+    parseQuickEntry("bought feeds last monday 100 pesos", { today: "2026-05-14" }).date,
+    "2026-05-11",
+  );
+  assert.equal(
+    parseQuickEntry("bought feeds last monday 100 pesos", { today: "2026-05-14" }).description,
+    "Feeds",
+  );
+  assert.equal(
+    parseQuickEntry("bought feeds last Thursday 100 pesos", { today: "2026-05-14" }).date,
+    "2026-05-07",
+  );
+});
+
+test("parses month-name dates", () => {
+  const cases = [
+    ["bought feeds May 14 100 pesos", "2026-05-14"],
+    ["bought feeds May 10 100 pesos", "2026-05-10"],
+    ["bought feeds 14 May 100 pesos", "2026-05-14"],
+    ["bought feeds May 10, 2026 100 pesos", "2026-05-10"],
+    ["bought feeds 14 May 2026 100 pesos", "2026-05-14"],
+  ];
+
+  for (const [text, expectedDate] of cases) {
+    const parsed = parseQuickEntry(text, { today: "2026-05-14" });
+    assert.equal(parsed.date, expectedDate, text);
+    assert.equal(parsed.description, "Feeds", text);
+  }
+});
+
+test("parses numeric dates", () => {
+  const cases = [
+    ["bought feeds 05/14/2026 100 pesos", "2026-05-14"],
+    ["bought feeds 5/10/26 100 pesos", "2026-05-10"],
+    ["bought feeds 14/05/2026 100 pesos", "2026-05-14"],
+    ["bought feeds 05-14-2026 100 pesos", "2026-05-14"],
+  ];
+
+  for (const [text, expectedDate] of cases) {
+    const parsed = parseQuickEntry(text, { today: "2026-05-14" });
+    assert.equal(parsed.date, expectedDate, text);
+    assert.equal(parsed.description, "Feeds", text);
+  }
+});
+
 test("marks vague entries for review", () => {
   const response = quickEntryResponse("misc purchase", {
     today: "2026-05-14",

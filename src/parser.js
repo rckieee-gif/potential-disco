@@ -230,6 +230,53 @@ const REVENUE_PATTERNS = [
   /\bearned\b/i,
 ];
 
+const MONTHS = {
+  january: 1,
+  jan: 1,
+  february: 2,
+  feb: 2,
+  march: 3,
+  mar: 3,
+  april: 4,
+  apr: 4,
+  may: 5,
+  june: 6,
+  jun: 6,
+  july: 7,
+  jul: 7,
+  august: 8,
+  aug: 8,
+  september: 9,
+  sept: 9,
+  sep: 9,
+  october: 10,
+  oct: 10,
+  november: 11,
+  nov: 11,
+  december: 12,
+  dec: 12,
+};
+
+const WEEKDAYS = {
+  sunday: 0,
+  sun: 0,
+  monday: 1,
+  mon: 1,
+  tuesday: 2,
+  tue: 2,
+  tues: 2,
+  wednesday: 3,
+  wed: 3,
+  thursday: 4,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  friday: 5,
+  fri: 5,
+  saturday: 6,
+  sat: 6,
+};
+
 function parseQuickEntry(text, options = {}) {
   const originalText = String(text || "").trim();
   const today = options.today || toLocalDate(new Date());
@@ -395,6 +442,7 @@ function buildDescription(text, amountResult, categoryMatch = null) {
     .replace(/\b(?:cash|gcash|bank|card|credit|debit)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
+  description = removeDatePhrases(description);
 
   if (amountResult.raw) {
     for (const rawPart of splitRawParts(amountResult.raw)) {
@@ -408,6 +456,7 @@ function buildDescription(text, amountResult, categoryMatch = null) {
     .replace(/[.,;:]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
+  description = removeDatePhrases(description);
   description = normalizeLocalTerms(description);
 
   if (!description) {
@@ -417,6 +466,20 @@ function buildDescription(text, amountResult, categoryMatch = null) {
   }
 
   return toTitleCase(description);
+}
+
+function removeDatePhrases(text) {
+  const monthAlternation = Object.keys(MONTHS).join("|");
+  const weekdayAlternation = Object.keys(WEEKDAYS).join("|");
+
+  return text
+    .replace(/\b(?:today|this morning|karong buntag|yesterday|gahapon|kagahapon|last week|previous week|niaging semana|last semana)\b/gi, " ")
+    .replace(new RegExp(`\\blast\\s+(?:${weekdayAlternation})\\b`, "gi"), " ")
+    .replace(new RegExp(`\\b(?:${monthAlternation})\\.?\\s+[0-9]{1,2}(?:st|nd|rd|th)?(?:,?\\s+(?:[0-9]{4}|[0-9]{2}(?![0-9])))?\\b`, "gi"), " ")
+    .replace(new RegExp(`\\b[0-9]{1,2}(?:st|nd|rd|th)?\\s+(?:${monthAlternation})\\.?(?:,?\\s+(?:[0-9]{4}|[0-9]{2}(?![0-9])))?\\b`, "gi"), " ")
+    .replace(/\b[0-9]{1,2}[/-][0-9]{1,2}(?:[/-][0-9]{2,4})?\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeLocalTerms(text) {
@@ -436,18 +499,137 @@ function normalizeLocalTerms(text) {
 }
 
 function inferDate(text, today) {
-  if (/\byesterday\b/i.test(text)) {
-    const date = new Date(`${today}T00:00:00`);
-    date.setDate(date.getDate() - 1);
-    return toLocalDate(date);
-  }
-
   const isoDate = /\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b/.exec(text);
   if (isoDate) {
     return isoDate[1];
   }
 
+  const numericDate = parseNumericDate(text, today);
+  if (numericDate) {
+    return numericDate;
+  }
+
+  const monthNameDate = parseMonthNameDate(text, today);
+  if (monthNameDate) {
+    return monthNameDate;
+  }
+
+  if (/\b(?:yesterday|gahapon|kagahapon)\b/i.test(text)) {
+    return addDays(today, -1);
+  }
+
+  if (/\b(?:last week|previous week|niaging semana|last semana)\b/i.test(text)) {
+    return addDays(today, -7);
+  }
+
+  const lastWeekday = parseLastWeekday(text, today);
+  if (lastWeekday) {
+    return lastWeekday;
+  }
+
   return today;
+}
+
+function parseNumericDate(text, today) {
+  const match = /\b([0-9]{1,2})[/-]([0-9]{1,2})(?:[/-]([0-9]{2,4}))?\b/.exec(text);
+  if (!match) {
+    return null;
+  }
+
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  const year = normalizeYear(match[3], today);
+  let month = first;
+  let day = second;
+
+  if (first > 12 && second <= 12) {
+    day = first;
+    month = second;
+  }
+
+  return buildDate(year, month, day);
+}
+
+function parseMonthNameDate(text, today) {
+  const monthAlternation = Object.keys(MONTHS).join("|");
+  const yearPattern = "([0-9]{4}|[0-9]{2}(?![0-9]))";
+  const monthDayPattern = new RegExp(`\\b(${monthAlternation})\\.?\\s+([0-9]{1,2})(?:st|nd|rd|th)?(?:,?\\s+${yearPattern})?\\b`, "i");
+  const dayMonthPattern = new RegExp(`\\b([0-9]{1,2})(?:st|nd|rd|th)?\\s+(${monthAlternation})\\.?(?:,?\\s+${yearPattern})?\\b`, "i");
+  const monthDay = monthDayPattern.exec(text);
+  if (monthDay) {
+    return buildDate(
+      normalizeYear(monthDay[3], today),
+      MONTHS[monthDay[1].toLowerCase()],
+      Number(monthDay[2]),
+    );
+  }
+
+  const dayMonth = dayMonthPattern.exec(text);
+  if (dayMonth) {
+    return buildDate(
+      normalizeYear(dayMonth[3], today),
+      MONTHS[dayMonth[2].toLowerCase()],
+      Number(dayMonth[1]),
+    );
+  }
+
+  return null;
+}
+
+function parseLastWeekday(text, today) {
+  const weekdayAlternation = Object.keys(WEEKDAYS).join("|");
+  const match = new RegExp(`\\blast\\s+(${weekdayAlternation})\\b`, "i").exec(text);
+  if (!match) {
+    return null;
+  }
+
+  const targetDay = WEEKDAYS[match[1].toLowerCase()];
+  const date = new Date(`${today}T00:00:00`);
+  const currentDay = date.getDay();
+  let diff = currentDay - targetDay;
+
+  if (diff <= 0) {
+    diff += 7;
+  }
+
+  date.setDate(date.getDate() - diff);
+  return toLocalDate(date);
+}
+
+function normalizeYear(value, today) {
+  if (!value) {
+    return Number(today.slice(0, 4));
+  }
+
+  const year = Number(value);
+  if (year < 100) {
+    return 2000 + year;
+  }
+
+  return year;
+}
+
+function buildDate(year, month, day) {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return toLocalDate(date);
+}
+
+function addDays(today, dayOffset) {
+  const date = new Date(`${today}T00:00:00`);
+  date.setDate(date.getDate() + dayOffset);
+  return toLocalDate(date);
 }
 
 function scoreConfidence({ originalText, amountResult, category, description }) {

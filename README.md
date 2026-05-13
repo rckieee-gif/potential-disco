@@ -109,6 +109,15 @@ Category guard:
 - `sold empty sacks 300 pesos` maps to `Income / Revenue / Empty Sack Sale`
 - `bought sacks 300 pesos` maps to `Expense / OPEX / Supplies`
 
+Date parsing:
+
+- Defaults to today when no date is stated
+- Today phrases: `today`, `this morning`, `karong buntag`
+- Yesterday phrases: `yesterday`, `gahapon`, `kagahapon`
+- Relative dates: `last week`, `last Monday`
+- Month names: `May 14`, `14 May`, `May 14 2026`
+- Numeric dates: `05/14/2026`, `5/10/26`, `14/05/2026`, `05-14-2026`
+
 ## Confirmed entries
 
 This app is based on the current public shapes of:
