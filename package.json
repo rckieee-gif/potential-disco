@@ -1,0 +1,14 @@
+{
+  "name": "farm-quick-entry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Natural-language transaction capture endpoint and review UI for poultry/farm ledger entries.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

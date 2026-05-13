@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Farm Quick Entry</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="capture-panel">
+        <div class="masthead">
+          <p>Farm ledger capture</p>
+          <h1>Quick Entry</h1>
+        </div>
+
+        <form id="entry-form" class="entry-form">
+          <label for="entry-text">Transaction text</label>
+          <textarea id="entry-text" name="entryText" rows="5" placeholder="bought wood repair for about 400 pesos">bought wood repair for about 400 pesos</textarea>
+          <button type="submit">Parse entry</button>
+        </form>
+      </section>
+
+      <section class="review-panel" aria-live="polite">
+        <div class="review-heading">
+          <p>Review</p>
+          <span id="review-status">Waiting for input</span>
+        </div>
+
+        <form id="review-form" class="review-form">
+          <label>
+            Type
+            <select name="type">
+              <option>Expense</option>
+              <option>Income</option>
+              <option>Adjustment</option>
+              <option>Reimbursement</option>
+              <option>Payment</option>
+            </select>
+          </label>
+
+          <label>
+            Funding Nature
+            <select name="fundingNature" id="funding-select"></select>
+          </label>
+
+          <label>
+            Ledger Category
+            <select name="category" id="category-select"></select>
+          </label>
+
+          <label>
+            Description
+            <input name="description" type="text">
+          </label>
+
+          <div class="split">
+            <label>
+              Amount
+              <input name="amount" type="number" min="0" step="0.01">
+            </label>
+
+            <label>
+              Currency
+              <input name="currency" type="text" value="PHP">
+            </label>
+          </div>
+
+          <div class="split">
+            <label>
+              Building
+              <input name="building" type="text" value="All">
+            </label>
+
+            <label>
+              Date
+              <input name="date" type="date">
+            </label>
+          </div>
+
+          <div class="split">
+            <label>
+              Paid By
+              <input name="paidBy" type="text" value="Rolly">
+            </label>
+
+            <label>
+              Paid To
+              <input name="paidTo" type="text">
+            </label>
+          </div>
+
+          <label>
+            Reference
+            <input name="reference" type="text">
+          </label>
+
+          <label>
+            Remarks
+            <input name="remarks" type="text">
+          </label>
+
+          <label>
+            Original text
+            <input name="originalText" type="text">
+          </label>
+
+          <div class="actions">
+            <button type="submit">Confirm entry</button>
+            <span id="confidence"></span>
+          </div>
+
+          <p id="parser-note" class="parser-note"></p>
+        </form>
+
+        <pre id="json-output">{}</pre>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
