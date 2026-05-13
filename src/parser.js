@@ -9,12 +9,14 @@ const CATEGORY_RULES = [
     quickCategory: "Sales Revenue",
     fundingNature: "Revenue",
     category: "Empty Sack Sale",
+    allowedTypes: ["Income"],
     patterns: [/\bempty sacks?\b/i, /\bsacks?\b/i],
   },
   {
     quickCategory: "Sales Revenue",
     fundingNature: "Revenue",
     category: "Net Meat Sale",
+    allowedTypes: ["Income"],
     patterns: [
       /\bsold\b/i,
       /\bbaligya\b/i,
@@ -28,12 +30,14 @@ const CATEGORY_RULES = [
       /\bearned\b/i,
       /\bmeat\b/i,
       /\bchickens?\b/i,
+      /\bmanok\b/i,
     ],
   },
   {
     quickCategory: "Feeds",
     fundingNature: "OPEX",
     category: "Feed",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bfeeds?\b/i,
       /\bpakaon\b/i,
@@ -50,6 +54,7 @@ const CATEGORY_RULES = [
     quickCategory: "Medicine / Vet",
     fundingNature: "OPEX",
     category: "Medicine",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bmedicine\b/i,
       /\btambal\b/i,
@@ -67,6 +72,7 @@ const CATEGORY_RULES = [
     quickCategory: "Labor",
     fundingNature: "OPEX",
     category: "Labor",
+    allowedTypes: ["Expense"],
     patterns: [
       /\blabo[u]?r\b/i,
       /\bsweldo\b/i,
@@ -83,6 +89,7 @@ const CATEGORY_RULES = [
     quickCategory: "Repairs and Maintenance",
     fundingNature: "OPEX",
     category: "Minor Repair",
+    allowedTypes: ["Expense"],
     patterns: [
       /\brepairs?\b/i,
       /\bpaayo\b/i,
@@ -99,6 +106,7 @@ const CATEGORY_RULES = [
     quickCategory: "Repairs and Maintenance",
     fundingNature: "CAPEX",
     category: "Building Repair",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bbuilding repair\b/i,
       /\bpoultry house\b/i,
@@ -111,6 +119,7 @@ const CATEGORY_RULES = [
     quickCategory: "Supplies",
     fundingNature: "CAPEX",
     category: "Hardware",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bhardware\b/i,
       /\blumber\b/i,
@@ -123,6 +132,7 @@ const CATEGORY_RULES = [
     quickCategory: "Utilities",
     fundingNature: "OPEX",
     category: "Utilities",
+    allowedTypes: ["Expense"],
     patterns: [
       /\belectric(?:ity)?\b/i,
       /\bkuryente\b/i,
@@ -138,6 +148,7 @@ const CATEGORY_RULES = [
     quickCategory: "Transport",
     fundingNature: "OPEX",
     category: "Transport",
+    allowedTypes: ["Expense"],
     patterns: [
       /\btransport\b/i,
       /\bplete\b/i,
@@ -156,6 +167,7 @@ const CATEGORY_RULES = [
     quickCategory: "Supplies",
     fundingNature: "OPEX",
     category: "Supplies",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bsupplies\b/i,
       /\bgamit\b/i,
@@ -172,6 +184,7 @@ const CATEGORY_RULES = [
     quickCategory: "Equipment",
     fundingNature: "CAPEX",
     category: "Equipment",
+    allowedTypes: ["Expense"],
     patterns: [
       /\bequipment\b/i,
       /\bcages?\b/i,
@@ -223,7 +236,7 @@ function parseQuickEntry(text, options = {}) {
   const amountResult = extractAmount(originalText);
   const type = inferTransactionType(originalText);
   const categoryMatch = inferCategory(originalText, type);
-  const description = buildDescription(originalText, amountResult);
+  const description = buildDescription(originalText, amountResult, categoryMatch);
   const confidence = scoreConfidence({
     originalText,
     amountResult,
@@ -239,6 +252,10 @@ function parseQuickEntry(text, options = {}) {
     quickCategory: categoryMatch.quickCategory,
     description,
     amount: amountResult.amount,
+    quantity: amountResult.quantity,
+    unit: amountResult.unit,
+    unitPrice: amountResult.unitPrice,
+    amountSource: amountResult.amountSource,
     currency: amountResult.currency,
     paymentMethod: "Cash",
     building: options.building || "All",
@@ -263,6 +280,10 @@ function quickEntryResponse(text, options = {}) {
       quickCategory: parsed.quickCategory,
       description: parsed.description,
       amount: parsed.amount,
+      quantity: parsed.quantity,
+      unit: parsed.unit,
+      unitPrice: parsed.unitPrice,
+      amountSource: parsed.amountSource,
       currency: parsed.currency,
       paymentMethod: parsed.paymentMethod,
       building: parsed.building,
@@ -279,24 +300,48 @@ function quickEntryResponse(text, options = {}) {
 }
 
 function extractAmount(text) {
-  const compactAmount = /(?:php|₱|p)\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(text);
-  const wordCurrencyAmount = /([0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:pesos?|php|₱)\b/i.exec(text);
-  const plainAmount = /(?:about|around|roughly|approximately|for|cost(?:s|ed)?|paid|spent)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(text);
-  const match = compactAmount || wordCurrencyAmount || plainAmount;
+  const quantityResult = extractQuantityAndUnitPrice(text);
+  const explicitResult = extractExplicitAmount(text, quantityResult);
+  const isEstimated = hasEstimateMarker(text);
+  const currency = inferCurrency(text);
 
-  if (!match) {
-    return { amount: null, currency: "PHP", raw: "" };
+  if (explicitResult.amount != null) {
+    return {
+      amount: explicitResult.amount,
+      quantity: quantityResult.quantity,
+      unit: quantityResult.unit,
+      unitPrice: quantityResult.unitPrice,
+      amountSource: isEstimated ? "estimated" : "explicit",
+      currency,
+      raw: joinRaw(quantityResult.raw, explicitResult.raw),
+    };
+  }
+
+  if (quantityResult.quantity != null && quantityResult.unitPrice != null) {
+    return {
+      amount: Number((quantityResult.quantity * quantityResult.unitPrice).toFixed(2)),
+      quantity: quantityResult.quantity,
+      unit: quantityResult.unit,
+      unitPrice: quantityResult.unitPrice,
+      amountSource: isEstimated ? "estimated" : "quantity_x_unit_price",
+      currency,
+      raw: quantityResult.raw,
+    };
   }
 
   return {
-    amount: Number(match[1].replace(/,/g, "")),
-    currency: inferCurrency(text),
-    raw: match[0],
+    amount: null,
+    quantity: quantityResult.quantity,
+    unit: quantityResult.unit,
+    unitPrice: quantityResult.unitPrice,
+    amountSource: isEstimated ? "estimated" : null,
+    currency,
+    raw: quantityResult.raw || "",
   };
 }
 
 function inferCurrency(text) {
-  if (/\b(?:peso|pesos|php)\b|₱/i.test(text)) {
+  if (/\b(?:peso|pesos|php)\b|\u20b1/i.test(text)) {
     return "PHP";
   }
 
@@ -304,11 +349,14 @@ function inferCurrency(text) {
 }
 
 function inferTransactionType(text) {
-  if (REVENUE_PATTERNS.some((pattern) => pattern.test(text))) {
+  const hasRevenueSignal = REVENUE_PATTERNS.some((pattern) => pattern.test(text));
+  const hasExpenseSignal = EXPENSE_PATTERNS.some((pattern) => pattern.test(text));
+
+  if (hasRevenueSignal && !hasExpenseSignal) {
     return "Income";
   }
 
-  if (EXPENSE_PATTERNS.some((pattern) => pattern.test(text))) {
+  if (hasExpenseSignal) {
     return "Expense";
   }
 
@@ -317,6 +365,7 @@ function inferTransactionType(text) {
 
 function inferCategory(text, transactionType) {
   const matchingRule = CATEGORY_RULES.find((rule) =>
+    (!rule.allowedTypes || rule.allowedTypes.includes(transactionType)) &&
     rule.patterns.some((pattern) => pattern.test(text)),
   );
 
@@ -339,28 +388,32 @@ function inferCategory(text, transactionType) {
   };
 }
 
-function buildDescription(text, amountResult) {
+function buildDescription(text, amountResult, categoryMatch = null) {
   let description = text
-    .replace(/\b(?:bought|buy|purchased|paid|spent|for|about|around|roughly|approximately)\b/gi, " ")
+    .replace(/\b(?:bought|buy|purchased|paid|spent|for|about|around|roughly|approximately|total|amount|cost(?:s|ed)?)\b/gi, " ")
     .replace(/\b(?:nipalit|nagpalit|gipalit|bumili|binili|nagbayad|mayad|binayad|kog|ko|ako|ng|sa|para|pang|mga|around|approx)\b/gi, " ")
     .replace(/\b(?:cash|gcash|bank|card|credit|debit)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 
   if (amountResult.raw) {
-    description = description.replace(amountResult.raw, " ");
+    for (const rawPart of splitRawParts(amountResult.raw)) {
+      description = description.replace(rawPart, " ");
+    }
   }
 
   description = description
-    .replace(/\b(?:pesos?|php)\b/gi, " ")
-    .replace(/₱/g, " ")
+    .replace(/\b(?:pesos?|php|each|per|at|x|@)\b/gi, " ")
+    .replace(/\u20b1/g, " ")
     .replace(/[.,;:]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
   description = normalizeLocalTerms(description);
 
   if (!description) {
-    return "Unspecified transaction";
+    return categoryMatch?.category && categoryMatch.category !== "Miscellaneous"
+      ? categoryMatch.category
+      : "Unspecified transaction";
   }
 
   return toTitleCase(description);
@@ -404,6 +457,10 @@ function scoreConfidence({ originalText, amountResult, category, description }) 
     score += 0.25;
   }
 
+  if (amountResult.amountSource === "quantity_x_unit_price") {
+    score += 0.04;
+  }
+
   if (category !== "Miscellaneous" && category !== "Miscellaneous Income") {
     score += 0.12;
   }
@@ -412,11 +469,137 @@ function scoreConfidence({ originalText, amountResult, category, description }) 
     score += 0.08;
   }
 
-  if (/\babout|around|roughly|approximately\b/i.test(originalText)) {
+  if (amountResult.amountSource === "estimated" || hasEstimateMarker(originalText)) {
     score -= 0.04;
   }
 
   return Math.max(0.01, Math.min(0.99, Number(score.toFixed(2))));
+}
+
+function extractExplicitAmount(text, quantityResult) {
+  const explicitPatterns = [
+    /\b(?:total|subtotal|amount|paid|cost(?:s|ed)?|for)\s*(?:php|\u20b1|p)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)(?:\s*(?:pesos?|php))?\b/i,
+    /(?:php|\u20b1)\s*([0-9][0-9,]*(?:\.[0-9]+)?)(?!\s*(?:each|ea|per|\/))/i,
+    /\b([0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:pesos?|php)\b(?!\s*(?:each|ea|per|\/))/i,
+  ];
+
+  for (const pattern of explicitPatterns) {
+    const match = pattern.exec(text);
+    if (match && !overlapsQuantityPrice(match[0], quantityResult.raw)) {
+      return {
+        amount: parseNumber(match[1]),
+        raw: match[0],
+      };
+    }
+  }
+
+  const numbers = [...text.matchAll(/\b[0-9][0-9,]*(?:\.[0-9]+)?\b/g)];
+  if (numbers.length === 1 && quantityResult.quantity == null && quantityResult.unitPrice == null) {
+    return {
+      amount: parseNumber(numbers[0][0]),
+      raw: numbers[0][0],
+    };
+  }
+
+  return { amount: null, raw: "" };
+}
+
+function extractQuantityAndUnitPrice(text) {
+  const unitPattern = "(sacks?|bags?|pcs?|pieces?|kilos?|kgs?|kg|liters?|litres?|ltr|bottles?|packs?|trays?|boxes?)";
+  const itemWords = "(?:\\s+(?!x\\b|at\\b|per\\b)[a-zA-Z]+){0,4}";
+  const quantityWithPricePatterns = [
+    new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:x|@|at|per)\\s*(?:php|\\u20b1|p)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:pesos?|php))?(?:\\s*(?:each|ea))?\\b`, "i"),
+    new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:php|\\u20b1|p)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:each|ea))?\\b`, "i"),
+  ];
+
+  for (const pattern of quantityWithPricePatterns) {
+    const match = pattern.exec(text);
+    if (match) {
+      return {
+        quantity: parseNumber(match[1]),
+        unit: normalizeUnit(match[2]),
+        unitPrice: parseNumber(match[3]),
+        raw: match[0],
+      };
+    }
+  }
+
+  const quantityOnly = new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}\\b`, "i").exec(text);
+  if (quantityOnly) {
+    return {
+      quantity: parseNumber(quantityOnly[1]),
+      unit: normalizeUnit(quantityOnly[2]),
+      unitPrice: null,
+      raw: quantityOnly[0],
+    };
+  }
+
+  return {
+    quantity: null,
+    unit: "",
+    unitPrice: null,
+    raw: "",
+  };
+}
+
+function parseNumber(value) {
+  return Number(String(value || "").replace(/,/g, ""));
+}
+
+function normalizeUnit(value) {
+  const unit = String(value || "").toLowerCase();
+  const unitMap = {
+    sack: "sack",
+    sacks: "sack",
+    bag: "bag",
+    bags: "bag",
+    pc: "piece",
+    pcs: "piece",
+    piece: "piece",
+    pieces: "piece",
+    kilo: "kg",
+    kilos: "kg",
+    kg: "kg",
+    kgs: "kg",
+    liter: "liter",
+    liters: "liter",
+    litre: "liter",
+    litres: "liter",
+    ltr: "liter",
+    bottle: "bottle",
+    bottles: "bottle",
+    pack: "pack",
+    packs: "pack",
+    tray: "tray",
+    trays: "tray",
+    box: "box",
+    boxes: "box",
+  };
+
+  return unitMap[unit] || unit;
+}
+
+function hasEstimateMarker(text) {
+  return /\b(?:about|around|roughly|approximately|approx|mga|murag|siguro|estimate|estimated)\b/i.test(text);
+}
+
+function overlapsQuantityPrice(explicitRaw, quantityRaw) {
+  if (!explicitRaw || !quantityRaw) {
+    return false;
+  }
+
+  return quantityRaw.toLowerCase().includes(explicitRaw.toLowerCase());
+}
+
+function joinRaw(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function splitRawParts(raw) {
+  return raw
+    .split(/\s{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function toTitleCase(text) {

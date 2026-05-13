@@ -168,11 +168,27 @@ function toOctavioPayload(parsed, batchId) {
     fundingNature: parsed.fundingNature,
     category: parsed.category,
     description: parsed.description,
+    quantity: parsed.quantity == null ? undefined : Number(parsed.quantity),
+    unitCost: parsed.unitPrice == null ? undefined : Number(parsed.unitPrice),
     amount: parsed.amount == null ? null : Number(parsed.amount),
     paidBy: parsed.paidBy || "Rolly",
     paidTo: parsed.paidTo || "",
     reference: parsed.reference || "",
-    remarks: parsed.remarks || `Quick entry: ${parsed.originalText || ""}`.trim(),
+    remarks: parsed.remarks || buildForwardingRemarks(parsed),
     feedItemId: parsed.feedItemId || null,
   };
+}
+
+function buildForwardingRemarks(parsed) {
+  const parts = [`Quick entry: ${parsed.originalText || ""}`.trim()];
+
+  if (parsed.unit) {
+    parts.push(`Unit: ${parsed.unit}`);
+  }
+
+  if (parsed.amountSource) {
+    parts.push(`Amount source: ${parsed.amountSource}`);
+  }
+
+  return parts.filter(Boolean).join(" | ");
 }

@@ -97,6 +97,9 @@ function readReviewForm() {
     ...latestParsed,
     ...data,
     amount: data.amount ? Number(data.amount) : null,
+    quantity: data.quantity ? Number(data.quantity) : null,
+    unitPrice: data.unitPrice ? Number(data.unitPrice) : null,
+    amountSource: data.amountSource || null,
     confidence: latestParsed?.confidence ?? null,
   };
 }

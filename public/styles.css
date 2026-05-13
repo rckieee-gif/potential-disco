@@ -148,6 +148,10 @@ button:hover {
   gap: 12px;
 }
 
+.split.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 pre {
   margin: 18px 0 0;
   max-height: 280px;
@@ -175,6 +179,7 @@ pre {
 
 @media (max-width: 520px) {
   .split,
+  .split.three,
   .review-heading,
   .actions {
     grid-template-columns: 1fr;

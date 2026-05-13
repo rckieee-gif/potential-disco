@@ -66,6 +66,33 @@
             </label>
           </div>
 
+          <div class="split three">
+            <label>
+              Quantity
+              <input name="quantity" type="number" min="0" step="0.001">
+            </label>
+
+            <label>
+              Unit
+              <input name="unit" type="text">
+            </label>
+
+            <label>
+              Unit Price
+              <input name="unitPrice" type="number" min="0" step="0.01">
+            </label>
+          </div>
+
+          <label>
+            Amount Source
+            <select name="amountSource">
+              <option value="">Unknown</option>
+              <option value="explicit">Explicit</option>
+              <option value="quantity_x_unit_price">Quantity x unit price</option>
+              <option value="estimated">Estimated</option>
+            </select>
+          </label>
+
           <div class="split">
             <label>
               Building

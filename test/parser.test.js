@@ -19,6 +19,10 @@ test("parses wood repair as an Octavio-compatible repair expense", () => {
   assert.equal(parsed.quickCategory, "Repairs and Maintenance");
   assert.equal(parsed.description, "Wood Repair");
   assert.equal(parsed.amount, 400);
+  assert.equal(parsed.quantity, null);
+  assert.equal(parsed.unit, "");
+  assert.equal(parsed.unitPrice, null);
+  assert.equal(parsed.amountSource, "estimated");
   assert.equal(parsed.currency, "PHP");
   assert.equal(parsed.paymentMethod, "Cash");
   assert.equal(parsed.building, "All");
@@ -48,6 +52,59 @@ test("detects revenue entries", () => {
   assert.equal(parsed.fundingNature, "Revenue");
   assert.equal(parsed.category, "Net Meat Sale");
   assert.equal(parsed.amount, 1200);
+  assert.equal(parsed.amountSource, "explicit");
+});
+
+test("calculates amount from quantity and unit price", () => {
+  const parsed = parseQuickEntry("bought 2 sacks feeds at 1500 pesos each", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Feed");
+  assert.equal(parsed.description, "Feed");
+  assert.equal(parsed.quantity, 2);
+  assert.equal(parsed.unit, "sack");
+  assert.equal(parsed.unitPrice, 1500);
+  assert.equal(parsed.amount, 3000);
+  assert.equal(parsed.amountSource, "quantity_x_unit_price");
+});
+
+test("keeps explicit total when quantity and unit price are also present", () => {
+  const parsed = parseQuickEntry("bought 2 sacks feeds at 1500 each total 2900 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.quantity, 2);
+  assert.equal(parsed.unit, "sack");
+  assert.equal(parsed.unitPrice, 1500);
+  assert.equal(parsed.amount, 2900);
+  assert.equal(parsed.amountSource, "explicit");
+});
+
+test("treats bought sacks as supplies expense", () => {
+  const parsed = parseQuickEntry("bought sacks 300 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Supplies");
+  assert.equal(parsed.quickCategory, "Supplies");
+  assert.equal(parsed.amount, 300);
+});
+
+test("treats sold empty sacks as revenue", () => {
+  const parsed = parseQuickEntry("sold empty sacks 300 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Income");
+  assert.equal(parsed.fundingNature, "Revenue");
+  assert.equal(parsed.category, "Empty Sack Sale");
+  assert.equal(parsed.quickCategory, "Sales Revenue");
+  assert.equal(parsed.amount, 300);
 });
 
 test("marks vague entries for review", () => {

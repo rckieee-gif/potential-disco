@@ -168,6 +168,9 @@ function buildSystemPrompt({ today, building, paidBy }) {
     "For expenses: common mappings include feed/feeds/pellets/pakaon -> OPEX/Feed; tambal/gamot/medicine/vet -> OPEX/Medicine; sweldo/sahod/labor -> OPEX/Labor; kuryente/tubig/electric/water -> OPEX/Utilities; plete/hatod/delivery/fuel -> OPEX/Transport; repair/ayo/paayo/nails -> OPEX/Minor Repair; hardware/lumber/plywood/wood/cement -> CAPEX/Hardware unless it is clearly a minor repair.",
     "For income: halin/sold/baligya/sale/revenue/income -> Income and Revenue. Meat/chicken sales -> Net Meat Sale, empty sacks -> Empty Sack Sale, otherwise Miscellaneous Income.",
     "Descriptions should be short title case English summaries, not full translations with extra explanation.",
+    "Extract amount details into quantity, unit, unitPrice, amount, and amountSource. Use amountSource explicit when the user states a total, quantity_x_unit_price when amount is computed from quantity times unitPrice, and estimated when words like about, around, mga, murag, or siguro make the value approximate.",
+    "If both a quantity/unit price and explicit total are present, keep quantity and unitPrice but use the explicit total as amount.",
+    "Do not assign Revenue categories to Expense entries. Example: sold empty sacks 300 pesos -> Income/Revenue/Empty Sack Sale. bought sacks 300 pesos -> Expense/OPEX/Supplies.",
     "If the amount is approximate, still extract the number and lower confidence slightly.",
     "Set needs-review-like uncertainty through confidence: use lower confidence for missing amount, vague category, or ambiguous type.",
   ].join("\n");
@@ -184,6 +187,10 @@ const quickEntrySchema = {
     "quickCategory",
     "description",
     "amount",
+    "quantity",
+    "unit",
+    "unitPrice",
+    "amountSource",
     "currency",
     "paymentMethod",
     "building",
@@ -222,6 +229,30 @@ const quickEntrySchema = {
     amount: {
       anyOf: [
         { type: "number", minimum: 0 },
+        { type: "null" },
+      ],
+    },
+    quantity: {
+      anyOf: [
+        { type: "number", minimum: 0 },
+        { type: "null" },
+      ],
+    },
+    unit: {
+      type: "string",
+    },
+    unitPrice: {
+      anyOf: [
+        { type: "number", minimum: 0 },
+        { type: "null" },
+      ],
+    },
+    amountSource: {
+      anyOf: [
+        {
+          type: "string",
+          enum: ["explicit", "quantity_x_unit_price", "estimated"],
+        },
         { type: "null" },
       ],
     },
@@ -272,6 +303,19 @@ const geminiQuickEntrySchema = {
       type: ["number", "null"],
       description: "The extracted amount. Use null only when no amount is stated.",
     },
+    quantity: {
+      type: ["number", "null"],
+      description: "Quantity if the entry states one, otherwise null.",
+    },
+    unitPrice: {
+      type: ["number", "null"],
+      description: "Unit price if the entry states one, otherwise null.",
+    },
+    amountSource: {
+      type: ["string", "null"],
+      enum: ["explicit", "quantity_x_unit_price", "estimated", null],
+      description: "Use explicit for a stated total, quantity_x_unit_price when calculated, estimated for approximate values, or null when amount is missing.",
+    },
   },
 };
 
@@ -287,6 +331,11 @@ function normalizeAiParsed(aiParsed, originalText, options = {}) {
     category = pair[1];
   }
 
+  if (!isTypeCompatibleWithFunding(type, fundingNature)) {
+    fundingNature = fallback.fundingNature;
+    category = fallback.category;
+  }
+
   return {
     type,
     transactionType: type,
@@ -297,6 +346,10 @@ function normalizeAiParsed(aiParsed, originalText, options = {}) {
       : fallback.quickCategory,
     description: cleanText(aiParsed.description) || fallback.description,
     amount: normalizeAmount(aiParsed.amount, fallback.amount),
+    quantity: normalizeNullableNumber(aiParsed.quantity, fallback.quantity),
+    unit: cleanText(aiParsed.unit) || fallback.unit || "",
+    unitPrice: normalizeNullableNumber(aiParsed.unitPrice, fallback.unitPrice),
+    amountSource: normalizeAmountSource(aiParsed.amountSource, fallback.amountSource),
     currency: normalizeCurrency(aiParsed.currency),
     paymentMethod: cleanText(aiParsed.paymentMethod) || "Cash",
     building: cleanText(aiParsed.building) || options.building || "All",
@@ -340,6 +393,18 @@ function inferPairFromCategory(category) {
   return octavioLedgerCategories.find(([, currentCategory]) => currentCategory === category);
 }
 
+function isTypeCompatibleWithFunding(type, fundingNature) {
+  if (type === "Income") {
+    return fundingNature === "Revenue";
+  }
+
+  if (type === "Expense") {
+    return fundingNature !== "Revenue";
+  }
+
+  return true;
+}
+
 function normalizeAmount(value, fallback) {
   if (value === null || value === undefined || value === "") {
     return fallback ?? null;
@@ -347,6 +412,21 @@ function normalizeAmount(value, fallback) {
 
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : fallback ?? null;
+}
+
+function normalizeNullableNumber(value, fallback) {
+  if (value === null || value === undefined || value === "") {
+    return fallback ?? null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback ?? null;
+}
+
+function normalizeAmountSource(value, fallback) {
+  return ["explicit", "quantity_x_unit_price", "estimated"].includes(value)
+    ? value
+    : fallback ?? null;
 }
 
 function normalizeCurrency(value) {

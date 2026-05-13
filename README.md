@@ -38,6 +38,10 @@ Response:
     "quickCategory": "Repairs and Maintenance",
     "description": "Wood Repair",
     "amount": 400,
+    "quantity": null,
+    "unit": "",
+    "unitPrice": null,
+    "amountSource": "estimated",
     "currency": "PHP",
     "paymentMethod": "Cash",
     "building": "All",
@@ -77,6 +81,33 @@ npm start
 If the AI request fails or no AI key is configured, the backend automatically falls back to the local rules parser and includes `parserMode` plus `parserWarning` in the response.
 
 The AI output is constrained to Octavio ledger fields and allowed category pairs before it reaches the review UI.
+
+Amount fields:
+
+- `quantity`: count stated by the user, such as `2`
+- `unit`: normalized unit, such as `sack`, `kg`, `piece`, or `tray`
+- `unitPrice`: price per unit when stated
+- `amount`: explicit total or calculated `quantity * unitPrice`
+- `amountSource`: `explicit`, `quantity_x_unit_price`, or `estimated`
+
+Examples:
+
+```text
+bought 2 sacks feeds at 1500 pesos each
+```
+
+Returns `quantity: 2`, `unit: "sack"`, `unitPrice: 1500`, `amount: 3000`, and `amountSource: "quantity_x_unit_price"`.
+
+```text
+bought 2 sacks feeds at 1500 each total 2900 pesos
+```
+
+Keeps the explicit total as `amount: 2900` and `amountSource: "explicit"`.
+
+Category guard:
+
+- `sold empty sacks 300 pesos` maps to `Income / Revenue / Empty Sack Sale`
+- `bought sacks 300 pesos` maps to `Expense / OPEX / Supplies`
 
 ## Confirmed entries
 
@@ -125,6 +156,8 @@ Payload fields prepared for Octavio:
   "fundingNature": "OPEX",
   "category": "Minor Repair",
   "description": "Wood Repair",
+  "quantity": null,
+  "unitCost": null,
   "amount": 400,
   "paidBy": "Rolly",
   "paidTo": "",
