@@ -129,6 +129,16 @@ const CATEGORY_RULES = [
   },
   {
     quickCategory: "Supplies",
+    fundingNature: "OPEX",
+    category: "Charcoal",
+    allowedTypes: ["Expense"],
+    patterns: [
+      /\bcharcoal\b/i,
+      /\buling\b/i,
+    ],
+  },
+  {
+    quickCategory: "Supplies",
     fundingNature: "CAPEX",
     category: "Hardware",
     allowedTypes: ["Expense"],
@@ -472,8 +482,20 @@ function buildDescription(text, amountResult, categoryMatch = null) {
     }
   }
 
+  if (amountResult.quantity != null) {
+    description = description.replace(new RegExp(`\\b${escapeRegExp(String(amountResult.quantity))}\\b`, "g"), " ");
+  }
+
+  if (amountResult.unit) {
+    description = description.replace(new RegExp(`\\b${escapeRegExp(amountResult.unit)}s?\\b`, "gi"), " ");
+  }
+
+  if (amountResult.unitPrice != null) {
+    description = description.replace(new RegExp(`\\b${escapeRegExp(String(amountResult.unitPrice))}\\b`, "g"), " ");
+  }
+
   description = description
-    .replace(/\b(?:pesos?|php|each|per|at|x|@)\b/gi, " ")
+    .replace(/\b(?:pesos?|php|each|per|at|x|@|of)\b/gi, " ")
     .replace(/\u20b1/g, " ")
     .replace(/[.,;:]+$/g, "")
     .replace(/\s+/g, " ")
@@ -713,6 +735,7 @@ function extractQuantityAndUnitPrice(text) {
   const itemWords = "(?:\\s+(?!x\\b|at\\b|per\\b)[a-zA-Z]+){0,4}";
   const quantityWithPricePatterns = [
     new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:x|@|at|per)\\s*(?:php|\\u20b1|p)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:pesos?|php))?(?:\\s*(?:each|ea))?\\b`, "i"),
+    new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s+for\\s*(?:php|\\u20b1|p)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:pesos?|php))?\\b`, "i"),
     new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s*(?:php|\\u20b1|p)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(?:\\s*(?:each|ea))?\\b`, "i"),
     new RegExp(`\\b([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*${unitPattern}${itemWords}\\s+([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:each|ea)\\b`, "i"),
   ];
@@ -805,6 +828,10 @@ function splitRawParts(raw) {
     .split(/\s{2,}/)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function toTitleCase(text) {

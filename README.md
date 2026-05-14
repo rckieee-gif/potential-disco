@@ -111,6 +111,7 @@ Category guard:
 - `customer paid balance 1000` maps to `Payment / Receivable / Reimbursement`
 - `sold 10 trays eggs 220 each` calculates `amount: 2200`
 - `bought 2 bags feed 1600 each` calculates `amount: 3200`
+- `bought 25 sacks of charcoal for 300 pesos` maps to `OPEX / Charcoal` and calculates `amount: 7500`
 
 Date parsing:
 

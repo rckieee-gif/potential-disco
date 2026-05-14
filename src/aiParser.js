@@ -165,7 +165,7 @@ function buildSystemPrompt({ today, building, paidBy }) {
     `Default building is ${building || "All"}. Default paidBy is ${paidBy || "Rolly"}.`,
     "Use PHP as the currency unless the user explicitly states another currency.",
     "Map the entry to the existing Octavio Poultry Farms ledger vocabulary.",
-    "For expenses: common mappings include feed/feeds/pellets/pakaon -> OPEX/Feed; tambal/gamot/medicine/vet -> OPEX/Medicine; sweldo/sahod/labor -> OPEX/Labor; kuryente/tubig/electric/water -> OPEX/Utilities; plete/hatod/delivery/fuel -> OPEX/Transport; repair/ayo/paayo/nails -> OPEX/Minor Repair; hardware/lumber/plywood/wood/cement -> CAPEX/Hardware unless it is clearly a minor repair.",
+    "For expenses: common mappings include feed/feeds/pellets/pakaon -> OPEX/Feed; charcoal/uling -> OPEX/Charcoal; tambal/gamot/medicine/vet -> OPEX/Medicine; sweldo/sahod/labor -> OPEX/Labor; kuryente/tubig/electric/water -> OPEX/Utilities; plete/hatod/delivery/fuel -> OPEX/Transport; repair/ayo/paayo/nails -> OPEX/Minor Repair; hardware/lumber/plywood/wood/cement -> CAPEX/Hardware unless it is clearly a minor repair.",
     "For income: halin/sold/baligya/sale/revenue/income -> Income and Revenue. Meat/chicken sales -> Net Meat Sale, empty sacks -> Empty Sack Sale, otherwise Miscellaneous Income.",
     "For receivable payments: phrases like customer paid balance, buyer paid receivable, or bayad sa utang should be type Payment, fundingNature Receivable, category Reimbursement.",
     "Descriptions should be short title case English summaries, not full translations with extra explanation.",

@@ -159,6 +159,22 @@ test("requested regression: bought bags of feed calculates amount", () => {
   assert.equal(parsed.amountSource, "quantity_x_unit_price");
 });
 
+test("requested regression: bought sacks of charcoal for unit price calculates amount", () => {
+  const parsed = parseQuickEntry("bought 25 sacks of charcoal for 300 pesos", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Expense");
+  assert.equal(parsed.fundingNature, "OPEX");
+  assert.equal(parsed.category, "Charcoal");
+  assert.equal(parsed.description, "Charcoal");
+  assert.equal(parsed.quantity, 25);
+  assert.equal(parsed.unit, "sack");
+  assert.equal(parsed.unitPrice, 300);
+  assert.equal(parsed.amount, 7500);
+  assert.equal(parsed.amountSource, "quantity_x_unit_price");
+});
+
 test("requested regression: paid helper yesterday parses labor and date", () => {
   const parsed = parseQuickEntry("paid helper yesterday 500 pesos", {
     today: "2026-05-14",
