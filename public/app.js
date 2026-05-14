@@ -6,6 +6,8 @@ const jsonOutput = document.querySelector("#json-output");
 const parserNote = document.querySelector("#parser-note");
 const fundingSelect = document.querySelector("#funding-select");
 const categorySelect = document.querySelector("#category-select");
+const entryText = document.querySelector("#entry-text");
+const exampleButtons = document.querySelectorAll("[data-example]");
 
 let latestParsed = null;
 let categoriesByFunding = {};
@@ -25,6 +27,12 @@ async function init() {
   entryForm.addEventListener("submit", parseEntry);
   reviewForm.addEventListener("submit", confirmEntry);
   reviewForm.addEventListener("input", updateJsonFromForm);
+  exampleButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      entryText.value = button.dataset.example;
+      entryText.focus();
+    });
+  });
   fundingSelect.addEventListener("change", () => {
     renderCategoryOptions(fundingSelect.value);
     updateJsonFromForm();

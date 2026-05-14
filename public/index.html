@@ -19,6 +19,57 @@
           <textarea id="entry-text" name="entryText" rows="5" placeholder="bought wood repair for about 400 pesos">bought wood repair for about 400 pesos</textarea>
           <button type="submit">Parse entry</button>
         </form>
+
+        <section class="writing-guide" aria-labelledby="guide-title">
+          <div class="guide-heading">
+            <p id="guide-title">Writing guide</p>
+            <span>Use natural text. Include date, item, quantity, and price when you know them.</span>
+          </div>
+
+          <div class="guide-grid">
+            <article>
+              <h2>Basic expense</h2>
+              <p>bought sacks 300 pesos</p>
+            </article>
+            <article>
+              <h2>Quantity and price</h2>
+              <p>bought 25 sacks of charcoal for 300 pesos</p>
+            </article>
+            <article>
+              <h2>Income</h2>
+              <p>sold 10 trays eggs 220 each</p>
+            </article>
+            <article>
+              <h2>Date words</h2>
+              <p>paid helper yesterday 500 pesos</p>
+            </article>
+            <article>
+              <h2>Bisaya / Tagalog</h2>
+              <p>gipalit ug kahoy pang repair 400</p>
+            </article>
+            <article>
+              <h2>Receivable payment</h2>
+              <p>customer paid balance 1000</p>
+            </article>
+          </div>
+
+          <div class="guide-rules">
+            <p>Good patterns</p>
+            <ul>
+              <li><strong>Item + total:</strong> bought medicine 350 pesos</li>
+              <li><strong>Qty + unit + price:</strong> bought 2 bags feed 1600 each</li>
+              <li><strong>Approximate:</strong> bought repair materials mga 400 pesos</li>
+              <li><strong>Dates:</strong> gahapon, last Monday, May 14, 05/14/2026</li>
+            </ul>
+          </div>
+
+          <div class="example-actions" aria-label="Example transaction text">
+            <button type="button" data-example="bought 25 sacks of charcoal for 300 pesos">Charcoal</button>
+            <button type="button" data-example="sold 10 trays eggs 220 each">Egg sales</button>
+            <button type="button" data-example="paid helper yesterday 500 pesos">Labor</button>
+            <button type="button" data-example="customer paid balance 1000">Payment</button>
+          </div>
+        </section>
       </section>
 
       <section class="review-panel" aria-live="polite">
