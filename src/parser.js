@@ -20,9 +20,20 @@ const CATEGORY_RULES = [
   {
     quickCategory: "Sales Revenue",
     fundingNature: "Revenue",
+    category: "Miscellaneous Income",
+    allowedTypes: ["Income"],
+    patterns: [
+      /\bchicken dung\b/i,
+      /\bmanure\b/i,
+      /\babono\b/i,
+    ],
+  },
+  {
+    quickCategory: "Sales Revenue",
+    fundingNature: "Revenue",
     category: "Empty Sack Sale",
     allowedTypes: ["Income"],
-    patterns: [/\bempty sacks?\b/i, /\bsacks?\b/i],
+    patterns: [/\bempty sacks?\b/i],
   },
   {
     quickCategory: "Sales Revenue",
@@ -469,7 +480,7 @@ function inferCategory(text, transactionType) {
 
 function buildDescription(text, amountResult, categoryMatch = null) {
   let description = text
-    .replace(/\b(?:bought|buy|purchased|paid|spent|for|about|around|roughly|approximately|total|amount|cost(?:s|ed)?)\b/gi, " ")
+    .replace(/\b(?:bought|buy|purchased|paid|spent|sold|sell|sale|sales|baligya|halin|nakabaligya|for|about|around|roughly|approximately|total|amount|cost(?:s|ed)?)\b/gi, " ")
     .replace(/\b(?:nipalit|nagpalit|gipalit|bumili|binili|nagbayad|mayad|binayad|kog|ko|ako|ng|sa|para|pang|mga|around|approx)\b/gi, " ")
     .replace(/\b(?:cash|gcash|bank|card|credit|debit)\b/gi, " ")
     .replace(/\s+/g, " ")

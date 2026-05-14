@@ -144,6 +144,22 @@ test("requested regression: sold trays of eggs calculates amount", () => {
   assert.equal(parsed.amountSource, "quantity_x_unit_price");
 });
 
+test("requested regression: sold sacks of chicken dung calculates amount", () => {
+  const parsed = parseQuickEntry("Sold 200 sacks of chicken dung for 35", {
+    today: "2026-05-14",
+  });
+
+  assert.equal(parsed.type, "Income");
+  assert.equal(parsed.fundingNature, "Revenue");
+  assert.equal(parsed.category, "Miscellaneous Income");
+  assert.equal(parsed.description, "Chicken Dung");
+  assert.equal(parsed.quantity, 200);
+  assert.equal(parsed.unit, "sack");
+  assert.equal(parsed.unitPrice, 35);
+  assert.equal(parsed.amount, 7000);
+  assert.equal(parsed.amountSource, "quantity_x_unit_price");
+});
+
 test("requested regression: bought bags of feed calculates amount", () => {
   const parsed = parseQuickEntry("bought 2 bags feed 1600 each", {
     today: "2026-05-14",
